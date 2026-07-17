@@ -15,7 +15,7 @@ struct ChapterizeCommand: ParsableCommand {
         version: CLIInfo.version
     )
 
-    @Argument(help: "Audio files to load (mp3, m4a, mp4, m4b, wav, aiff).")
+    @Argument(help: "Audio files to load (mp3, m4a, mp4, m4b, wav, wave, aif, aiff).")
     var audioFiles: [String] = []
 
     @Option(name: [.customShort("s"), .customLong("subtitles")],
@@ -67,11 +67,19 @@ struct ChapterizeCommand: ParsableCommand {
             staged.append(try Stager.stage(plan))
         }
 
+        var opened = false
+        var openError: CLIError?
         if !noOpen {
             progress("Opening Chapterize...")
-            try AppLauncher.openApp()
+            do {
+                try AppLauncher.openApp()
+                opened = true
+            } catch let error as CLIError {
+                openError = error
+            }
         }
-        emitSummary(staged: staged, opened: !noOpen, plans: plans)
+        emitSummary(staged: staged, opened: opened, plans: plans)
+        if let openError { throw openError }
     }
 
     private func progress(_ text: String) {

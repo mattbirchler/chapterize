@@ -28,7 +28,7 @@ chapterize --open                      # just open the app
 chapterize ep.mp3 --json -q            # silent run, JSON result on stdout
 ```
 
-Audio can be mp3, m4a, mp4, m4b, wav, or aiff (non-MP3 formats are converted
+Audio can be mp3, m4a, mp4, m4b, wav, wave, aif, or aiff (non-MP3 formats are converted
 inside the app, exactly like a drag-and-drop import). A subtitle file sitting
 next to the audio with the same name (`ep.mp3` plus `ep.srt` or `ep.vtt`) is
 picked up automatically; `--no-auto-subs` turns that off.
@@ -37,7 +37,8 @@ Progress goes to stderr and results go to stdout, so it pipes cleanly.
 
 The first run may trigger a macOS prompt asking to allow access to data from
 other apps. Approve it: the tool works by handing files to Chapterize's
-inbox.
+inbox. If you denied it, re-enable access in System Settings under Privacy
+and Security before trying again.
 
 ## Exit codes
 

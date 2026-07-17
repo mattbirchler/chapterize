@@ -11,7 +11,7 @@ public struct DropPlan: Equatable, Sendable {
 }
 
 public enum InputValidator {
-    public static let audioExtensions: Set<String> = ["mp3", "m4a", "mp4", "m4b", "wav", "aiff"]
+    public static let audioExtensions: Set<String> = ["mp3", "m4a", "mp4", "m4b", "wav", "wave", "aif", "aiff"]
     public static let subtitleExtensions: Set<String> = ["srt", "vtt"]
 
     public static func plans(

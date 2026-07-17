@@ -51,7 +51,7 @@ public enum Stager {
         } catch {
             try? fm.removeItem(at: stagingFolder)
             throw CLIError.stagingFailed(
-                "\(error.localizedDescription) If macOS asked whether to allow access to data from other apps, allow it and run the command again.")
+                "\(error.localizedDescription) If macOS asked whether to allow access to data from other apps, allow it and run the command again. If you previously denied that prompt, turn it back on in System Settings under Privacy and Security, App Management, then retry.")
         }
     }
 }

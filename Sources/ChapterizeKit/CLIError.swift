@@ -22,7 +22,7 @@ public enum CLIError: Error, Equatable {
         case .fileNotFound(let path):
             return "File not found: \(path)"
         case .unsupportedType(let path):
-            return "Unsupported file type: \(path). Audio must be mp3, m4a, mp4, m4b, wav, or aiff; subtitles must be srt or vtt."
+            return "Unsupported file type: \(path). Audio must be mp3, m4a, mp4, m4b, wav, wave, aif, or aiff; subtitles must be srt or vtt."
         case .appNotInstalled:
             return "The Chapterize app is not installed. Get it from the Mac App Store, then try again."
         case .stagingFailed(let detail):

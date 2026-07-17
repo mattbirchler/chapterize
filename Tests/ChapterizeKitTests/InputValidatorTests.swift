@@ -81,6 +81,18 @@ private func touch(_ url: URL) throws {
     }
 }
 
+@Test func acceptsAifAndWaveExtensions() throws {
+    let dir = try makeTempDir()
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let aif = dir.appendingPathComponent("ep.aif")
+    let wave = dir.appendingPathComponent("ep2.wave")
+    try touch(aif); try touch(wave)
+
+    let plans = try InputValidator.plans(
+        audioPaths: [aif.path, wave.path], subtitlePath: nil, autoPairSidecars: false)
+    #expect(plans.count == 2)
+}
+
 @Test func exitCodesMatchSpec() {
     #expect(CLIError.usage("x").exitCode == 1)
     #expect(CLIError.fileNotFound("x").exitCode == 1)
