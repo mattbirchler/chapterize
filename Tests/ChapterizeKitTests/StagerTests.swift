@@ -52,6 +52,19 @@ private func makeFixture() throws -> (home: URL, audio: URL, subs: URL) {
     #expect(contents == ["ep.mp3", "manifest.json"])
 }
 
+@Test func stagesShowNameIntoManifest() throws {
+    let (home, audio, _) = try makeFixture()
+    defer { try? FileManager.default.removeItem(at: home) }
+
+    let drop = try Stager.stage(
+        DropPlan(audioURL: audio, subtitleURL: nil, showName: "Cortex"),
+        home: home, cliVersion: "1.0.0", now: Date())
+
+    let manifestData = try Data(contentsOf: drop.dropURL.appendingPathComponent("manifest.json"))
+    let manifest = try JSONDecoder().decode(InboxManifest.self, from: manifestData)
+    #expect(manifest.showName == "Cortex")
+}
+
 @Test func distinctDropsGetDistinctFolders() throws {
     let (home, audio, _) = try makeFixture()
     defer { try? FileManager.default.removeItem(at: home) }

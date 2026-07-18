@@ -22,6 +22,10 @@ struct ChapterizeCommand: ParsableCommand {
             help: "Subtitle file (srt or vtt). Only valid with a single audio file.")
     var subtitles: String?
 
+    @Option(name: .customLong("show"),
+            help: "Show name to associate the file(s) with. Matches an existing show, or is used as a label if none matches.")
+    var show: String?
+
     @Flag(name: .customLong("no-auto-subs"),
           help: "Do not auto-pair sidecar subtitle files by basename.")
     var noAutoSubs = false
@@ -59,7 +63,8 @@ struct ChapterizeCommand: ParsableCommand {
         let plans = try InputValidator.plans(
             audioPaths: audioFiles,
             subtitlePath: subtitles,
-            autoPairSidecars: !noAutoSubs)
+            autoPairSidecars: !noAutoSubs,
+            showName: show)
 
         var staged: [StagedDrop] = []
         for plan in plans {
@@ -91,6 +96,7 @@ struct ChapterizeCommand: ParsableCommand {
         struct Item: Codable {
             let audio: String
             let subtitles: String?
+            let show: String?
             let drop: String
         }
         let staged: [Item]
@@ -104,6 +110,7 @@ struct ChapterizeCommand: ParsableCommand {
                     Summary.Item(
                         audio: plan.audioURL.path,
                         subtitles: plan.subtitleURL?.path,
+                        show: plan.showName,
                         drop: drop.dropURL.path)
                 },
                 opened: opened)
@@ -116,11 +123,14 @@ struct ChapterizeCommand: ParsableCommand {
         }
         guard !quiet else { return }
         for (drop, plan) in zip(staged, plans) {
+            var line = "Loaded \(drop.manifest.audioFilename)"
             if let sub = plan.subtitleURL {
-                print("Loaded \(drop.manifest.audioFilename) with \(sub.lastPathComponent)")
-            } else {
-                print("Loaded \(drop.manifest.audioFilename)")
+                line += " with \(sub.lastPathComponent)"
             }
+            if let show = plan.showName {
+                line += " for \(show)"
+            }
+            print(line)
         }
         if staged.isEmpty && opened {
             print("Opened Chapterize")

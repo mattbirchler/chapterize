@@ -41,7 +41,8 @@ public enum Stager {
                 subtitleFilename: plan.subtitleURL?.lastPathComponent,
                 sourcePath: plan.audioURL.path,
                 cliVersion: cliVersion,
-                createdAt: now)
+                createdAt: now,
+                showName: plan.showName)
             try manifest.encodedJSON().write(
                 to: stagingFolder.appendingPathComponent("manifest.json"),
                 options: .atomic)
