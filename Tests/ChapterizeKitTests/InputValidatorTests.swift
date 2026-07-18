@@ -27,6 +27,38 @@ private func touch(_ url: URL) throws {
     #expect(plans[0].subtitleURL?.lastPathComponent == "other.vtt")
 }
 
+@Test func showNameAppliesToAllPlans() throws {
+    let dir = try makeTempDir()
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let a = dir.appendingPathComponent("a.mp3")
+    let b = dir.appendingPathComponent("b.mp3")
+    try touch(a); try touch(b)
+
+    let plans = try InputValidator.plans(
+        audioPaths: [a.path, b.path], subtitlePath: nil, autoPairSidecars: false, showName: "Cortex")
+    #expect(plans.count == 2)
+    #expect(plans.allSatisfy { $0.showName == "Cortex" })
+}
+
+@Test func showNameIsTrimmedAndBlankBecomesNil() throws {
+    let dir = try makeTempDir()
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let a = dir.appendingPathComponent("a.mp3")
+    try touch(a)
+
+    let trimmed = try InputValidator.plans(
+        audioPaths: [a.path], subtitlePath: nil, autoPairSidecars: false, showName: "  Cortex  ")
+    #expect(trimmed[0].showName == "Cortex")
+
+    let blank = try InputValidator.plans(
+        audioPaths: [a.path], subtitlePath: nil, autoPairSidecars: false, showName: "   ")
+    #expect(blank[0].showName == nil)
+
+    let absent = try InputValidator.plans(
+        audioPaths: [a.path], subtitlePath: nil, autoPairSidecars: false)
+    #expect(absent[0].showName == nil)
+}
+
 @Test func pairsSidecarSRTOverVTT() throws {
     let dir = try makeTempDir()
     defer { try? FileManager.default.removeItem(at: dir) }

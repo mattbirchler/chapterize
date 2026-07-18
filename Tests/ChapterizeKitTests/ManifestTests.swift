@@ -17,6 +17,43 @@ import Testing
     #expect(decoded.createdAt.hasSuffix("Z"))
 }
 
+@Test func manifestRoundTripsShowName() throws {
+    let manifest = InboxManifest(
+        audioFilename: "ep.mp3",
+        subtitleFilename: nil,
+        sourcePath: "/Users/me/ep.mp3",
+        cliVersion: "1.0.0",
+        createdAt: Date(),
+        showName: "Cortex"
+    )
+    let decoded = try JSONDecoder().decode(InboxManifest.self, from: manifest.encodedJSON())
+    #expect(decoded.showName == "Cortex")
+    #expect(decoded == manifest)
+}
+
+@Test func manifestOmittedShowNameIsNil() throws {
+    let manifest = InboxManifest(
+        audioFilename: "ep.mp3",
+        subtitleFilename: nil,
+        sourcePath: "/Users/me/ep.mp3",
+        cliVersion: "1.0.0",
+        createdAt: Date()
+    )
+    let decoded = try JSONDecoder().decode(InboxManifest.self, from: manifest.encodedJSON())
+    #expect(decoded.showName == nil)
+}
+
+@Test func manifestDecodesLegacyJSONWithoutShowName() throws {
+    // A manifest written by a pre-showName CLI must still decode.
+    let legacy = """
+    {"schemaVersion":1,"audioFilename":"ep.mp3","subtitleFilename":null,\
+    "sourcePath":"/tmp/ep.mp3","cliVersion":"0.9.0","createdAt":"2026-07-17T10:00:00Z"}
+    """
+    let decoded = try JSONDecoder().decode(InboxManifest.self, from: Data(legacy.utf8))
+    #expect(decoded.showName == nil)
+    #expect(decoded.audioFilename == "ep.mp3")
+}
+
 @Test func manifestOmittedSubtitleIsNil() throws {
     let manifest = InboxManifest(
         audioFilename: "ep.mp3",

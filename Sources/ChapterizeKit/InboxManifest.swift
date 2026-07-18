@@ -7,13 +7,17 @@ public struct InboxManifest: Codable, Equatable, Sendable {
     public let sourcePath: String
     public let cliVersion: String
     public let createdAt: String
+    /// Optional show name from the `--show` flag. The app matches it to an
+    /// existing show (case-insensitive) or, failing that, uses it as a label.
+    public let showName: String?
 
     public init(
         audioFilename: String,
         subtitleFilename: String?,
         sourcePath: String,
         cliVersion: String,
-        createdAt: Date
+        createdAt: Date,
+        showName: String? = nil
     ) {
         self.schemaVersion = 1
         self.audioFilename = audioFilename
@@ -21,6 +25,7 @@ public struct InboxManifest: Codable, Equatable, Sendable {
         self.sourcePath = sourcePath
         self.cliVersion = cliVersion
         self.createdAt = ISO8601DateFormatter().string(from: createdAt)
+        self.showName = showName
     }
 
     public func encodedJSON() throws -> Data {
