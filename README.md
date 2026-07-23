@@ -23,7 +23,7 @@ Requires macOS 26 (Tahoe) or later, and Chapterize 1.6 or later.
 chapterize episode.mp3                 # load into the app, then open it
 chapterize ep.mp3 -s ep.srt            # load with a specific subtitle file
 chapterize a.mp3 b.mp3                 # load two documents at once
-chapterize ep.mp3 --show "Cortex"      # associate with a show by name
+chapterize ep.mp3 --show "Cozy Zone"   # associate with a show by name
 chapterize ep.mp3 --no-open            # stage without opening the app
 chapterize --open                      # just open the app
 chapterize ep.mp3 --json -q            # silent run, JSON result on stdout
