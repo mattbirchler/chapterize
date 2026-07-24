@@ -46,6 +46,19 @@ other apps. Approve it: the tool works by handing files to Chapterize's
 inbox. If you denied it, re-enable access in System Settings under Privacy
 and Security before trying again.
 
+## Analytics
+
+Successful runs send one small anonymous event to PostHog (the same project
+the Chapterize app reports to): the event name, file and subtitle counts,
+whether a show name was used, the CLI version, and the macOS version. No file
+names, paths, show names, or other content are ever sent. IP addresses are
+discarded at ingestion and no location is derived. A random ID stored in
+`~/Library/Application Support/chapterize/` lets PostHog count distinct users;
+it identifies nothing but "same machine as last time".
+
+To opt out, set `CHAPTERIZE_NO_ANALYTICS=1` (or the cross-tool convention
+`DO_NOT_TRACK=1`) in your environment.
+
 ## Exit codes
 
 | Code | Meaning |

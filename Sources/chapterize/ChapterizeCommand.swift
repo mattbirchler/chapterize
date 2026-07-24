@@ -53,6 +53,7 @@ struct ChapterizeCommand: ParsableCommand {
             guard AppLauncher.isAppInstalled() else { throw CLIError.appNotInstalled }
             try AppLauncher.openApp()
             emitSummary(staged: [], opened: true)
+            CLIAnalytics.send(.appOpened)
             return
         }
         guard !audioFiles.isEmpty else {
@@ -84,6 +85,12 @@ struct ChapterizeCommand: ParsableCommand {
             }
         }
         emitSummary(staged: staged, opened: opened, plans: plans)
+        CLIAnalytics.send(.filesLoaded, metadata: [
+            "file_count": staged.count,
+            "subtitle_count": plans.count(where: { $0.subtitleURL != nil }),
+            "has_show": show != nil,
+            "opened": opened,
+        ])
         if let openError { throw openError }
     }
 
