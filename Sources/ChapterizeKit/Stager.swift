@@ -36,13 +36,20 @@ public enum Stager {
                     to: stagingFolder.appendingPathComponent(subtitleURL.lastPathComponent))
             }
 
+            if let chapters = plan.chapters {
+                try chapters.data.write(
+                    to: stagingFolder.appendingPathComponent(chapters.format.dropFilename))
+            }
+
             let manifest = InboxManifest(
                 audioFilename: plan.audioURL.lastPathComponent,
                 subtitleFilename: plan.subtitleURL?.lastPathComponent,
                 sourcePath: plan.audioURL.path,
                 cliVersion: cliVersion,
                 createdAt: now,
-                showName: plan.showName)
+                showName: plan.showName,
+                title: plan.title,
+                chaptersFilename: plan.chapters?.format.dropFilename)
             try manifest.encodedJSON().write(
                 to: stagingFolder.appendingPathComponent("manifest.json"),
                 options: .atomic)
