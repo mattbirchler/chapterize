@@ -4,11 +4,16 @@ public struct DropPlan: Equatable, Sendable {
     public let audioURL: URL
     public let subtitleURL: URL?
     public let showName: String?
+    public let title: String?
+    public let chapters: ChapterFile?
 
-    public init(audioURL: URL, subtitleURL: URL?, showName: String? = nil) {
+    public init(audioURL: URL, subtitleURL: URL?, showName: String? = nil,
+                title: String? = nil, chapters: ChapterFile? = nil) {
         self.audioURL = audioURL
         self.subtitleURL = subtitleURL
         self.showName = showName
+        self.title = title
+        self.chapters = chapters
     }
 }
 
@@ -20,13 +25,25 @@ public enum InputValidator {
         audioPaths: [String],
         subtitlePath: String?,
         autoPairSidecars: Bool,
-        showName: String? = nil
+        showName: String? = nil,
+        title: String? = nil,
+        chapters: ChapterFile? = nil
     ) throws -> [DropPlan] {
         guard !audioPaths.isEmpty else {
             throw CLIError.usage("Provide at least one audio file, or use --open to just open the app.")
         }
         if subtitlePath != nil && audioPaths.count != 1 {
             throw CLIError.usage("--subtitles can only be used with a single audio file.")
+        }
+        if title != nil && audioPaths.count != 1 {
+            throw CLIError.usage("--title can only be used with a single audio file.")
+        }
+        if chapters != nil && audioPaths.count != 1 {
+            throw CLIError.usage("--chapters can only be used with a single audio file.")
+        }
+        let trimmedTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedTitle, trimmedTitle.isEmpty {
+            throw CLIError.usage("--title cannot be empty.")
         }
 
         // Trim the show name; treat an all-whitespace value as none. Applies to
@@ -55,11 +72,12 @@ public enum InputValidator {
                 throw CLIError.unsupportedType(url.path)
             }
             let subtitle = explicitSubtitle ?? (autoPairSidecars ? sidecar(for: url) : nil)
-            return DropPlan(audioURL: url, subtitleURL: subtitle, showName: resolvedShowName)
+            return DropPlan(audioURL: url, subtitleURL: subtitle, showName: resolvedShowName,
+                            title: trimmedTitle, chapters: chapters)
         }
     }
 
-    static func resolved(_ path: String) -> URL {
+    public static func resolved(_ path: String) -> URL {
         URL(fileURLWithPath: (path as NSString).expandingTildeInPath).standardizedFileURL
     }
 

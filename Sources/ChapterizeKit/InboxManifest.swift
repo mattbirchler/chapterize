@@ -10,6 +10,12 @@ public struct InboxManifest: Codable, Equatable, Sendable {
     /// Optional show name from the `--show` flag. The app matches it to an
     /// existing show (case-insensitive) or, failing that, uses it as a label.
     public let showName: String?
+    /// Optional episode title from `--title` (1.2+). Apps before the one
+    /// that writes receipts ignore it.
+    public let title: String?
+    /// Optional chapters file in the drop from `--chapters` (1.2+), JSON or
+    /// `TIME - Title` text. Replaces the chapters the audio carried.
+    public let chaptersFilename: String?
 
     public init(
         audioFilename: String,
@@ -17,7 +23,9 @@ public struct InboxManifest: Codable, Equatable, Sendable {
         sourcePath: String,
         cliVersion: String,
         createdAt: Date,
-        showName: String? = nil
+        showName: String? = nil,
+        title: String? = nil,
+        chaptersFilename: String? = nil
     ) {
         self.schemaVersion = 1
         self.audioFilename = audioFilename
@@ -26,6 +34,8 @@ public struct InboxManifest: Codable, Equatable, Sendable {
         self.cliVersion = cliVersion
         self.createdAt = ISO8601DateFormatter().string(from: createdAt)
         self.showName = showName
+        self.title = title
+        self.chaptersFilename = chaptersFilename
     }
 
     public func encodedJSON() throws -> Data {

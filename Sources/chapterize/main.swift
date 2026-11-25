@@ -6,10 +6,10 @@ import Foundation
 // comes back as JSON when the caller asked for JSON.
 let wantsJSON = CommandLine.arguments.dropFirst().contains("--json")
 
-func fail(_ error: CLIError, staged: [RunReport.Item] = []) -> Never {
+func fail(_ error: CLIError, staged: [RunReport.Item] = [], opened: Bool = false) -> Never {
     FileHandle.standardError.write(Data(("chapterize: " + error.message + "\n").utf8))
     if wantsJSON {
-        print(RunReport(error: error, staged: staged, opened: false).encodedJSON())
+        print(RunReport(error: error, staged: staged, opened: opened).encodedJSON())
     }
     exit(error.exitCode)
 }
@@ -18,7 +18,7 @@ do {
     let command = try ChapterizeCommand.parse()
     try command.run()
 } catch let failure as ReportedFailure {
-    fail(failure.error, staged: failure.staged)
+    fail(failure.error, staged: failure.staged, opened: failure.opened)
 } catch let error as CLIError {
     fail(error)
 } catch {
