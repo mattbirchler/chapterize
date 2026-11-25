@@ -26,11 +26,27 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
+SOURCE_VERSION=$(sed -n 's/.*version = "\(.*\)".*/\1/p' Sources/ChapterizeKit/CLIInfo.swift)
+if [[ "$SOURCE_VERSION" != "$VERSION" ]]; then
+  echo "CLIInfo.version is ${SOURCE_VERSION}, not ${VERSION}. Bump it first." >&2
+  exit 1
+fi
+
 echo "Building chapterize ${VERSION} (release, universal)..."
 swift build -c release --arch arm64 --arch x86_64
 
-BIN=".build/apple/Products/Release/chapterize"
+# Ask SwiftPM where it put the product: the universal output moved from
+# .build/apple to .build/out, and a hardcoded path packaged a leftover
+# binary (1.2.0's first zip reported 1.1.1). The version check below
+# catches that if it ever moves again.
+BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/chapterize"
 test -x "$BIN"
+lipo -info "$BIN"
+BUILT_VERSION=$("$BIN" --version)
+if [[ "$BUILT_VERSION" != "$VERSION" ]]; then
+  echo "Built binary reports ${BUILT_VERSION}, expected ${VERSION}." >&2
+  exit 1
+fi
 
 echo "Signing with Developer ID..."
 codesign --force --options runtime --timestamp \
