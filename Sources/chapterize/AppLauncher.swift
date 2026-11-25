@@ -7,10 +7,13 @@ enum AppLauncher {
         NSWorkspace.shared.urlForApplication(withBundleIdentifier: CLIInfo.appBundleID) != nil
     }
 
-    static func openApp() throws {
+    /// Opens (or wakes) the app. In the background it launches without
+    /// coming to the front, so a script never pulls focus from whatever the
+    /// person is doing; the inbox watcher picks the files up either way.
+    static func openApp(background: Bool = false) throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = ["-b", CLIInfo.appBundleID]
+        process.arguments = (background ? ["-g"] : []) + ["-b", CLIInfo.appBundleID]
         do {
             try process.run()
         } catch {
