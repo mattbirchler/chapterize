@@ -11,6 +11,25 @@ struct ChapterizeCommand: ParsableCommand {
             Chapterize Mac app as new documents, then opens the app. Subtitle \
             files sitting next to an audio file with the same name are picked \
             up automatically.
+
+            Examples:
+              chapterize episode.mp3                  load, then open the app
+              chapterize ep.mp3 -s ep.srt             load with a subtitle file
+              chapterize ep.mp3 --show "Comfort Zone" associate with a show by name
+              chapterize ep.mp3 --background          load without bringing the app forward
+              chapterize ep.mp3 --dry-run --json      check inputs, change nothing
+              chapterize ep.mp3 --json                JSON result on stdout
+
+            Output: progress goes to stderr, results to stdout. With --json, \
+            stdout is always one JSON object, on success and on failure: read \
+            "ok" first; failures carry "error" with a stable "code".
+
+            Exit codes:
+              0  success
+              1  bad input or usage (usage, file_not_found, unsupported_type)
+              2  handoff failed (app_not_installed, staging_failed, open_failed)
+              3  permission_denied: macOS blocked access to the app's inbox; a
+                 person has to allow it, retrying will not help
             """,
         version: CLIInfo.version
     )
@@ -33,10 +52,18 @@ struct ChapterizeCommand: ParsableCommand {
     @Flag(name: .customLong("no-open"), help: "Stage files without opening the app.")
     var noOpen = false
 
+    @Flag(name: .customLong("background"),
+          help: "Open the app without bringing it to the front.")
+    var background = false
+
     @Flag(name: .customLong("open"), help: "Just open the app without loading files.")
     var openOnly = false
 
-    @Flag(name: .customLong("json"), help: "Print a machine-readable JSON summary to stdout.")
+    @Flag(name: .customLong("dry-run"),
+          help: "Check the inputs and print what would be loaded, without staging anything or opening the app.")
+    var dryRun = false
+
+    @Flag(name: .customLong("json"), help: "Print one machine-readable JSON object to stdout, on success and on failure.")
     var json = false
 
     @Flag(name: [.customShort("q"), .customLong("quiet")], help: "Suppress progress output.")
@@ -46,20 +73,25 @@ struct ChapterizeCommand: ParsableCommand {
         if noOpen && openOnly {
             throw CLIError.usage("--open and --no-open cannot be combined.")
         }
+        if noOpen && background {
+            throw CLIError.usage("--background and --no-open cannot be combined.")
+        }
         if openOnly {
             guard audioFiles.isEmpty else {
                 throw CLIError.usage("--open does not take file arguments.")
             }
+            if dryRun {
+                emit(RunReport(staged: [], opened: false, dryRun: true))
+                return
+            }
             guard AppLauncher.isAppInstalled() else { throw CLIError.appNotInstalled }
-            try AppLauncher.openApp()
-            emitSummary(staged: [], opened: true)
-            CLIAnalytics.send(.appOpened)
+            try AppLauncher.openApp(background: background)
+            emit(RunReport(staged: [], opened: true))
             return
         }
         guard !audioFiles.isEmpty else {
             throw CLIError.usage("Provide at least one audio file, or use --open to just open the app.")
         }
-        guard AppLauncher.isAppInstalled() else { throw CLIError.appNotInstalled }
 
         let plans = try InputValidator.plans(
             audioPaths: audioFiles,
@@ -67,80 +99,74 @@ struct ChapterizeCommand: ParsableCommand {
             autoPairSidecars: !noAutoSubs,
             showName: show)
 
-        var staged: [StagedDrop] = []
-        for plan in plans {
-            progress("Staging \(plan.audioURL.lastPathComponent)...")
-            staged.append(try Stager.stage(plan))
+        if dryRun {
+            emit(RunReport(staged: plans.map { item(for: $0, drop: nil) }, opened: false, dryRun: true))
+            return
         }
 
-        var opened = false
-        var openError: CLIError?
+        guard AppLauncher.isAppInstalled() else { throw CLIError.appNotInstalled }
+
+        var staged: [RunReport.Item] = []
+        for plan in plans {
+            progress("Staging \(plan.audioURL.lastPathComponent)...")
+            let drop = try Stager.stage(plan)
+            staged.append(item(for: plan, drop: drop.dropURL.path))
+        }
+
         if !noOpen {
             progress("Opening Chapterize...")
             do {
-                try AppLauncher.openApp()
-                opened = true
+                try AppLauncher.openApp(background: background)
             } catch let error as CLIError {
-                openError = error
+                // The files are in the inbox and will load on the next
+                // launch, so report them along with the failure.
+                throw ReportedFailure(error: error, staged: staged)
             }
         }
-        emitSummary(staged: staged, opened: opened, plans: plans)
-        CLIAnalytics.send(.filesLoaded, metadata: [
-            "file_count": staged.count,
-            "subtitle_count": plans.count(where: { $0.subtitleURL != nil }),
-            "has_show": show != nil,
-            "opened": opened,
-        ])
-        if let openError { throw openError }
+        emit(RunReport(staged: staged, opened: !noOpen))
+    }
+
+    private func item(for plan: DropPlan, drop: String?) -> RunReport.Item {
+        RunReport.Item(audio: plan.audioURL.path, subtitles: plan.subtitleURL?.path,
+                       show: plan.showName, drop: drop)
     }
 
     private func progress(_ text: String) {
-        guard !quiet else { return }
+        guard !quiet, !json else { return }
         FileHandle.standardError.write(Data((text + "\n").utf8))
     }
 
-    private struct Summary: Codable {
-        struct Item: Codable {
-            let audio: String
-            let subtitles: String?
-            let show: String?
-            let drop: String
-        }
-        let staged: [Item]
-        let opened: Bool
-    }
-
-    private func emitSummary(staged: [StagedDrop], opened: Bool, plans: [DropPlan] = []) {
+    private func emit(_ report: RunReport) {
         if json {
-            let summary = Summary(
-                staged: zip(staged, plans).map { drop, plan in
-                    Summary.Item(
-                        audio: plan.audioURL.path,
-                        subtitles: plan.subtitleURL?.path,
-                        show: plan.showName,
-                        drop: drop.dropURL.path)
-                },
-                opened: opened)
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            if let data = try? encoder.encode(summary), let text = String(data: data, encoding: .utf8) {
-                print(text)
-            }
+            print(report.encodedJSON())
             return
         }
         guard !quiet else { return }
-        for (drop, plan) in zip(staged, plans) {
-            var line = "Loaded \(drop.manifest.audioFilename)"
-            if let sub = plan.subtitleURL {
-                line += " with \(sub.lastPathComponent)"
+        if report.dryRun {
+            for item in report.staged {
+                var line = "Would load \(item.audio)"
+                if let subs = item.subtitles { line += " with \(subs)" }
+                if let show = item.show { line += " for \(show)" }
+                print(line)
             }
-            if let show = plan.showName {
-                line += " for \(show)"
-            }
+            if report.staged.isEmpty { print("Would open Chapterize") }
+            return
+        }
+        for item in report.staged {
+            var line = "Loaded \(URL(fileURLWithPath: item.audio).lastPathComponent)"
+            if let subs = item.subtitles { line += " with \(URL(fileURLWithPath: subs).lastPathComponent)" }
+            if let show = item.show { line += " for \(show)" }
             print(line)
         }
-        if staged.isEmpty && opened {
+        if report.staged.isEmpty && report.opened {
             print("Opened Chapterize")
         }
     }
+}
+
+/// A failure after some files were already handed over: the JSON report
+/// lists them so a caller knows they will still load.
+struct ReportedFailure: Error {
+    let error: CLIError
+    let staged: [RunReport.Item]
 }

@@ -51,6 +51,9 @@ public enum Stager {
             return StagedDrop(dropURL: inboxFolder, manifest: manifest)
         } catch {
             try? fm.removeItem(at: stagingFolder)
+            if CLIError.isPermissionError(error) {
+                throw CLIError.permissionDenied(error.localizedDescription)
+            }
             throw CLIError.stagingFailed(
                 "\(error.localizedDescription) If macOS asked whether to allow access to data from other apps, allow it and run the command again. If you previously denied that prompt, turn it back on in System Settings under Privacy and Security, App Management, then retry.")
         }
